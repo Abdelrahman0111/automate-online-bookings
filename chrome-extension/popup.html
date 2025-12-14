@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            width: 380px;
+            padding: 15px;
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            margin: 0;
+            background: #f5f5f5;
+        }
+        .logo-header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #d32f2f;
+        }
+        .logo-header img {
+            max-width: 120px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+        .header {
+            text-align: center;
+            color: #d32f2f;
+            margin: 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin: 10px 0;
+            cursor: pointer;
+            background: white;
+            border-radius: 5px;
+        }
+        .upload-area:hover {
+            border-color: #d32f2f;
+            background: #fef5f5;
+        }
+        .file-input {
+            display: none;
+        }
+        .btn {
+            background: #d32f2f;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            width: 100%;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background: #b71c1c;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .success {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .info {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #d32f2f;
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-header">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 50'%3E%3Crect width='200' height='50' fill='%23d32f2f'/%3E%3Ctext x='50' y='35' font-family='Arial' font-size='28' font-weight='bold' fill='white'%3EWebBeds%3C/text%3E%3C/svg%3E" alt="WebBeds">
+        <div class="header">🤖 أتمتة WebBeds</div>
+    </div>
+
+    <div class="upload-area" id="uploadArea">
+        <p>📁 اسحب ملف Excel هنا أو اضغط للاختيار</p>
+        <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls,.csv">
+    </div>
+
+    <div id="fileInfo" style="display: none;">
+        <p><strong>الملف المحدد:</strong> <span id="fileName"></span></p>
+    </div>
+
+    <button id="processBtn" class="btn" disabled>🔍 تحليل الملف</button>
+    <button id="startBtn" class="btn" disabled>🚀 بدء الأتمتة</button>
+
+    <div class="progress" id="progressContainer" style="display: none;">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div id="status"></div>
+
+    <div id="results" style="display: none;">
+        <h4>📊 النتائج:</h4>
+        <p>✅ نجح: <span id="successCount">0</span></p>
+        <p>❌ فشل: <span id="failCount">0</span></p>
+        <button id="downloadBtn" class="btn">📥 تحميل التقرير</button>
+    </div>
+
+    <script src="xlsx.min.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>
