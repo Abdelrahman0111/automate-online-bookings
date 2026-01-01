@@ -67,7 +67,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns([1, 1, 1])
+col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 
 with col1:
     st.info("💼 **WebBeds**\nللتعامل مع حجوزات WebBeds")
@@ -76,12 +76,15 @@ with col2:
     st.info("🏢 **Extranet**\nللشركات الأخرى (EET Global، العطايا، Safa، إلخ)")
 
 with col3:
+    st.info("✈️ **Almosafer**\nللتعامل مع حجوزات المسافر")
+
+with col4:
     st.info("📊 معلومات إضافية\nسيتم عرض تفاصيل المقارنة")
 
 operation_type = st.selectbox(
     "اختر نوع العملية التي تريدها:",
-    ["اختر...", "WebBeds", "Extranet (جميع الشركات الأخرى)"],
-    help="حدد ما إذا كنت تعمل مع WebBeds أو شركات Extranet الأخرى"
+    ["اختر...", "WebBeds", "Extranet (جميع الشركات الأخرى)", "Almosafer"],
+    help="حدد ما إذا كنت تعمل مع WebBeds أو شركات Extranet الأخرى أو Almosafer"
 )
 
 if operation_type == "اختر...":
@@ -423,7 +426,7 @@ if operation_type == "WebBeds":
     else:
         st.info("📤 الرجاء تحميل كلا الملفين (جود و WebBeds) لبدء المقارنة")
 
-else:
+elif operation_type == "Extranet (جميع الشركات الأخرى)":
     # Extranet Companies Logic
     st.markdown("""
         <div class="section-header">
@@ -662,6 +665,272 @@ else:
                            "4. جرّب تحويل الملف إلى CSV وحاول مرة أخرى")
     else:
         st.info("📤 الرجاء تحميل كلا الملفين (ملف الشركة وملف جود) لبدء المقارنة")
+
+elif operation_type == "Almosafer":
+    # Almosafer Logic
+    st.markdown("""
+        <div class="section-header">
+            <h2>✈️ أتمتة حجوزات Almosafer</h2>
+            <p>مقارنة بيانات المسافر مع جود واستخراج المراجع الناقصة</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("**📁 رفع الملفات المطلوبة:**")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        ### 1️⃣ ملف Almosafer
+        
+        - يحتوي على **Booking Ref.** و **confirmationNumber**
+        - صيغة: CSV
+        - ملف التصدير من نظام Almosafer
+        """)
+        file_almosafer = st.file_uploader(
+            "اختر ملف Almosafer",
+            type=['csv', 'xlsx', 'xls'],
+            key="file_almosafer",
+            help="ملف يحتوي على بيانات الحجوزات من Almosafer"
+        )
+    
+    with col2:
+        st.markdown("""
+        ### 2️⃣ ملف جود (Jood Arrivals)
+        
+        - يحتوي على **ClientReference** و **HotelConf**
+        - صيغة: CSV
+        - بيانات الوصول في نظام جود
+        """)
+        file_jood_almosafer = st.file_uploader(
+            "اختر ملف جود",
+            type=['csv'],
+            key="file_jood_almosafer",
+            help="ملف CSV من نظام جود"
+        )
+    
+    st.markdown("---")
+    
+    if file_almosafer and file_jood_almosafer:
+        if st.button("🚀 بدء المقارنة والتحليل", key="almosafer_process", use_container_width=True):
+            with st.spinner("⏳ جاري مقارنة Almosafer مع جود..."):
+                try:
+                    # قراءة ملف Almosafer
+                    df_almosafer = None
+                    df_jood = None
+                    
+                    try:
+                        if file_almosafer.name.endswith('.csv'):
+                            df_almosafer = pd.read_csv(file_almosafer, encoding='utf-8-sig')
+                        elif file_almosafer.name.endswith('.xlsx'):
+                            result = pd.read_excel(file_almosafer, engine='openpyxl')
+                            if isinstance(result, dict):
+                                df_almosafer = result[list(result.keys())[0]]
+                            else:
+                                df_almosafer = result
+                        elif file_almosafer.name.endswith('.xls'):
+                            result = pd.read_excel(file_almosafer, engine='xlrd')
+                            if isinstance(result, dict):
+                                df_almosafer = result[list(result.keys())[0]]
+                            else:
+                                df_almosafer = result
+                    except Exception as e:
+                        file_almosafer.seek(0)
+                        df_almosafer = pd.read_csv(file_almosafer, encoding='utf-8-sig')
+                    
+                    # قراءة ملف جود
+                    try:
+                        df_jood = pd.read_csv(file_jood_almosafer, encoding='utf-8-sig')
+                    except:
+                        file_jood_almosafer.seek(0)
+                        df_jood = pd.read_csv(file_jood_almosafer)
+                    
+                    # التحقق من النتائج
+                    if df_almosafer is None or not isinstance(df_almosafer, pd.DataFrame):
+                        st.error("❌ خطأ في قراءة ملف Almosafer")
+                        st.stop()
+                    if df_jood is None or not isinstance(df_jood, pd.DataFrame):
+                        st.error("❌ خطأ في قراءة ملف جود")
+                        st.stop()
+                    
+                    # تنظيف أسماء الأعمدة
+                    df_almosafer.columns = df_almosafer.columns.str.strip()
+                    df_jood.columns = df_jood.columns.str.strip()
+                    
+                    # التحقق من الأعمدة المطلوبة
+                    col_booking_ref = 'Booking Ref.'
+                    col_confirmation = 'confirmationNumber'
+                    col_client_ref = 'ClientReference'
+                    col_hotel_conf = 'HotelConf'
+                    
+                    # التحقق من وجود الأعمدة
+                    missing_almosafer = []
+                    missing_jood = []
+                    
+                    if col_booking_ref not in df_almosafer.columns:
+                        missing_almosafer.append(col_booking_ref)
+                    if col_confirmation not in df_almosafer.columns:
+                        missing_almosafer.append(col_confirmation)
+                    if col_client_ref not in df_jood.columns:
+                        missing_jood.append(col_client_ref)
+                    if col_hotel_conf not in df_jood.columns:
+                        missing_jood.append(col_hotel_conf)
+                    
+                    if missing_almosafer:
+                        st.error(f"❌ أعمدة مفقودة في ملف Almosafer: {', '.join(missing_almosafer)}")
+                        st.info(f"📋 الأعمدة الموجودة: {', '.join(df_almosafer.columns.tolist())}")
+                        st.stop()
+                    
+                    if missing_jood:
+                        st.error(f"❌ أعمدة مفقودة في ملف جود: {', '.join(missing_jood)}")
+                        st.info(f"📋 الأعمدة الموجودة: {', '.join(df_jood.columns.tolist())}")
+                        st.stop()
+                    
+                    # تنظيف البيانات
+                    df_almosafer[col_booking_ref] = df_almosafer[col_booking_ref].astype(str).str.strip()
+                    df_almosafer[col_confirmation] = df_almosafer[col_confirmation].fillna('').astype(str).str.strip()
+                    df_almosafer[col_confirmation] = df_almosafer[col_confirmation].apply(lambda x: x.replace('.0', '') if x.endswith('.0') else x)
+                    
+                    df_jood[col_client_ref] = df_jood[col_client_ref].astype(str).str.strip()
+                    df_jood[col_hotel_conf] = df_jood[col_hotel_conf].fillna('').astype(str).str.strip()
+                    df_jood[col_hotel_conf] = df_jood[col_hotel_conf].apply(lambda x: x.replace('.0', '') if x.endswith('.0') else x)
+                    
+                    # دالة الفلترة (استبعاد sent)
+                    def is_valid_conf(val):
+                        if val == '' or val.lower() == 'nan':
+                            return False
+                        if 'sent' in val.lower():
+                            return False
+                        return True
+                    
+                    # تجميع بيانات جود (مع التعامل مع التكرار)
+                    jood_agg = df_jood.groupby(col_client_ref)[col_hotel_conf].apply(
+                        lambda x: list(set([i for i in x if is_valid_conf(i)]))
+                    ).reset_index()
+                    jood_agg.rename(columns={col_hotel_conf: 'Jood_Confs_List'}, inplace=True)
+                    
+                    # دمج الملفين
+                    merged_df = pd.merge(df_almosafer, jood_agg, left_on=col_booking_ref, right_on=col_client_ref, how='left')
+                    
+                    # استخراج النواقص - إذا كان HotelConf != confirmationNumber أو confirmationNumber فارغ
+                    missing_data = []
+                    comparison_results = []
+                    
+                    for index, row in merged_df.iterrows():
+                        booking_ref = row[col_booking_ref]
+                        almosafer_conf = row[col_confirmation]
+                        
+                        # القيم الموجودة في جود
+                        jood_vals_list = row['Jood_Confs_List']
+                        
+                        if isinstance(jood_vals_list, list) and len(jood_vals_list) > 0:
+                            jood_vals_set = set(jood_vals_list)
+                            
+                            # التحقق إذا كان confirmationNumber موجود أو مطابق
+                            if almosafer_conf == '' or almosafer_conf == 'nan' or almosafer_conf not in jood_vals_set:
+                                # يحتاج إضافة - نأخذ أول HotelConf من جود
+                                for hotel_conf in jood_vals_list:
+                                    if hotel_conf != almosafer_conf:  # فقط إذا لم يكن مطابق
+                                        missing_data.append({
+                                            'Booking Ref.': booking_ref,
+                                            'HotelConf': hotel_conf
+                                        })
+                                
+                                comparison_results.append({
+                                    'Booking_Ref': booking_ref,
+                                    'Almosafer_confirmationNumber': almosafer_conf if almosafer_conf else 'فارغ',
+                                    'Jood_HotelConf': ' | '.join(jood_vals_list),
+                                    'Status': 'يحتاج إجراء',
+                                    'Reason': 'HCN غير مطابق أو فارغ'
+                                })
+                            else:
+                                comparison_results.append({
+                                    'Booking_Ref': booking_ref,
+                                    'Almosafer_confirmationNumber': almosafer_conf,
+                                    'Jood_HotelConf': ' | '.join(jood_vals_list),
+                                    'Status': 'مكتمل',
+                                    'Reason': 'HCN مطابق'
+                                })
+                        else:
+                            comparison_results.append({
+                                'Booking_Ref': booking_ref,
+                                'Almosafer_confirmationNumber': almosafer_conf if almosafer_conf else 'فارغ',
+                                'Jood_HotelConf': 'غير موجود في جود',
+                                'Status': 'غير موجود',
+                                'Reason': 'لا يوجد في جود'
+                            })
+                    
+                    # عرض النتائج
+                    if missing_data:
+                        result_df = pd.DataFrame(missing_data)
+                        comparison_df = pd.DataFrame(comparison_results)
+                        
+                        # إحصائيات
+                        unique_bookings = result_df['Booking Ref.'].nunique()
+                        total_missing_confs = len(result_df)
+                        total_complete = len([r for r in comparison_results if r['Status'] == 'مكتمل'])
+                        total_need_action = len([r for r in comparison_results if r['Status'] == 'يحتاج إجراء'])
+                        
+                        st.success(f"✅ تمت المقارنة بنجاح! تم العثور على {total_missing_confs} مرجع ناقص")
+                        
+                        # عرض إحصائيات مفصلة
+                        st.markdown("""
+                            <div class="section-header">
+                                <h3>📊 إحصائيات المقارنة</h3>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("🎯 إجمالي الحجوزات", len(df_almosafer))
+                        with col2:
+                            st.metric("✅ مكتمل", total_complete)
+                        with col3:
+                            st.metric("⚠️ يحتاج تحديث", total_need_action)
+                        with col4:
+                            st.metric("📌 إجمالي المراجع", total_missing_confs)
+                        
+                        st.markdown("**📋 جدول المقارنة:**")
+                        st.dataframe(comparison_df, use_container_width=True)
+                        
+                        st.markdown("**📋 جدول المراجع الناقصة (للأتمتة):**")
+                        st.dataframe(result_df, use_container_width=True)
+                        
+                        csv = result_df.to_csv(index=False, encoding='utf-8-sig')
+                        
+                        st.markdown("---")
+                        st.download_button(
+                            label="📥 تحميل ملف الأتمتة (CSV)",
+                            data=csv,
+                            file_name='almosafer_automation_data.csv',
+                            mime='text/csv',
+                            use_container_width=True
+                        )
+                    else:
+                        st.balloons()
+                        st.success("""
+                        ### ✨ ممتاز!
+                        
+                        لا توجد أرقام مراجع ناقصة في **Almosafer**
+                        
+                        جميع حجوزات Almosafer لديها المراجع الموجودة في جود ✅
+                        """)
+                        
+                        # عرض جدول المقارنة على أي حال
+                        if comparison_results:
+                            comparison_df = pd.DataFrame(comparison_results)
+                            st.markdown("**📋 جدول المقارنة:**")
+                            st.dataframe(comparison_df, use_container_width=True)
+                
+                except Exception as e:
+                    st.error(f"❌ حدث خطأ أثناء المعالجة:\n\n{str(e)}")
+                    st.info("💡 **نصائح للمساعدة:**\n" +
+                           "1. تأكد من أن الملف ليس تالفاً أو معطوباً\n" +
+                           "2. تأكد من امتداء الملف صحيح (.csv, .xlsx, .xls)\n" +
+                           "3. تأكد من وجود الأعمدة: Booking Ref. و confirmationNumber في ملف Almosafer\n" +
+                           "4. تأكد من وجود الأعمدة: ClientReference و HotelConf في ملف جود")
+    else:
+        st.info("📤 الرجاء تحميل كلا الملفين (ملف Almosafer وملف جود) لبدء المقارنة")
 
 # قسم معلومات الشركات والروابط
 st.markdown("---")
